@@ -1,0 +1,33 @@
+----------------------------nodejs typescript test task with the use of typeorm --------------------------------------------
+Follow below step to setup project:
+
+1. migration.ts file in the migration folder
+=> Run command ==>  migration:run
+   In this path: ts-node node_modules\typeorm\cli.js
+ 
+2. Create index.ts file into the src folder
+  
+3. Create routes in methodRouter.route.ts file   
+=>Call methodRouter.controller.ts file which is include all the calls from methodRouter.route.ts 
+    
+4. db.ts file to create
+  --> It having DB things included type, database name, port number, host strings.
+
+5. methodRouter.controller.ts 
+=> GetData is for get the data from database when get request send with payload
+   GET http://localhost:3000/users
+  
+=> PostData is for new data add into user table
+   POST http://localhost:3000/users 
+  
+=> PatchData is for update the data into user table
+   PATCH http://localhost:3000/users?id={userId}&phoneNumber={phoneNumber}
+ 
+=> DeleteData  is for delete data which is define into url with id and phoneNumber
+   delete ==> DELETE http://localhost:3000/users?id={userId}&phoneNumber={phoneNumber}
+
+
+  	  
+	  
+  	  
+	  
