@@ -1,5 +1,5 @@
 const connection = require('./db');
-import { Request, Response } from "express";
+// import { Request, Response } from "express";
 import { User } from "./entity/User";
 
 //startConnection function is for find connection with data base and excess with userRepository to change database
@@ -19,104 +19,157 @@ startConnection();
 //to get data
 // - fetch a user matching the query
 // - if no query params are specified, return all
-var GetData = async function (req: Request, res: Response) {
-
-    const { id } = req.query
-    const { phoneNumber } = req.query
-
+var GetData = async function (req, res) {
     let results;
-    try {
-        if (id && phoneNumber) {
+    let idString = req.url.split("id=")[1];
+
+    if (idString) {
+        let id = idString.split("&")[0];
+        let phoneNumber = req.url.split("phoneNumber=")[1];
+        try {
             results = await userRepository.findOne({ id, phoneNumber });
             if (results) {
-                return res.status(201).send(results);
+                res.writeHead(201, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ results }));
             }
             else {
-                return res.status(400).send('invalid id or phone number');
+                // return res.status(400).end('invalid id or phone number');
+                res.writeHead(404, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ message: "invalid id or phone number" }));
+
             }
+        } catch (err) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ message: "invalid id or phone number" }));
         }
-        else {
+    }
+    else {
+        try {
+            res.writeHead(201, { "Content-Type": "application/json" });
             results = await userRepository.find();
-            return res.status(201).send(results);
+            res.end(JSON.stringify({ results }));
+            // console.log("result",results);
+
+        } catch (error) {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ message: " not found" }));
         }
-    } catch (err) {
-        return res.status(400).send('invalid id or phone number');
     }
+
 }
-
+function getReqData(req) {
+    return new Promise((resolve, reject) => {
+        try {
+            let body = "";
+            // listen to data sent by client
+            req.on("data", (chunk) => {
+                // append the string version to the body
+                body += chunk.toString();
+            });
+            // listen till the end
+            req.on("end", () => {
+                // send back the data
+                resolve(body);
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
 // to create a user
-var PostData = async function (req: Request, res: Response) {
-    let user;
+var PostData = async function (req, res) {
     let results;
-    const { phoneNumber } = req.body
+    const data = await getReqData(req);
 
+    const body_data = JSON.parse(`${data}`)
+    // console.log("req.body==>",{ phoneNumber:data[0].phoneNumber});
+    const phoneNumber = body_data.results.phoneNumber;
+    
     try {
-        if (phoneNumber && phoneNumber.length == 10) {
-            user = await userRepository.create(req.body);
-            results = await userRepository.save(user);
+        if (phoneNumber && phoneNumber.toString().length===10) {
+            res.writeHead(201, { "Content-Type": "application/json" });
+            results = await userRepository.save(body_data.results);
+            res.end(JSON.stringify({ results }));
+            
         }
         else {
-            return res.status(400).send('Phone number should be 10 digit');
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ message: "Phone number should be 10 digit" }));
 
         }
     } catch (err) {
-        return res.status(400).send('invalid data');
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "invalid data" }));
 
-    }
-    return res.send(results);
+    }  
 }
 //to update user data 
-var PatchData = async function (req: Request, res: Response) {
+var PatchData = async function (req, res) {
     let results;
     let users;
-    const { id } = req.query
-    const { phoneNumber } = req.body
-    const data = req.query.phoneNumber
+    let idString = req.url.split("id=")[1];
+    let id = idString.split("&")[0];
+    let oldPhoneNumber = req.url.split("phoneNumber=")[1];
+    const data = await getReqData(req);
+
+    const body_data = JSON.parse(`${data}`)
+    // console.log("req.body==>",{ phoneNumber:data[0].phoneNumber});
+    const phoneNumber = body_data.results.phoneNumber;
+
 
     try {
-        users = await userRepository.findOne(id, data);
+        users = await userRepository.findOne(id, oldPhoneNumber);        
         if (users) {
-            if (phoneNumber.length == 10) {
-                userRepository.merge(users, req.body);
+            if (phoneNumber.toString().length == 10) {
+                res.writeHead(404, { "Content-Type": "application/json" });
+                userRepository.merge(users, body_data.results);
                 results = await userRepository.save(users);
+                return res.end(JSON.stringify({ results }));
             }
             else {
-                return res.status(400).send('phone number should be 10 digit');
+                // return res.end('phone number should be 10 digit');
+                res.writeHead(404, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ message: "phone number should be 10 digit" }));
             }
         }
         else {
-            return res.status(400).send('invalid  id or phone number');
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ message: "invalid  id or phone number" }));
         }
     }
     catch (err) {
-        return res.status(400).send('invalid id or phone number');
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "invalid  id or phone number" }));
     }
-    return res.send(results);
 }
 
 //to delete user data 
-var DeleteData = async function (req: Request, res: Response) {
+var DeleteData = async function (req, res) {
     let results;
-    const { phoneNumber } = req.query
-    const { id } = req.query
+    let idString = req.url.split("id=")[1];
+    let id = idString.split("&")[0];
+    let phoneNumber = req.url.split("phoneNumber=")[1];
 
     try {
         if (phoneNumber && id) {
+            res.writeHead(400, { "Content-Type": "application/json" });
             results = await userRepository.delete({ id, phoneNumber });
             if (results.affected != 0) {
-                return res.send(results);
+                return res.end(JSON.stringify({ results }));
             }
             else {
-                return res.status(400).send('invalid id or phone number');
+                res.writeHead(400, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ message: "invalid  id or phone number" }));
             }
         }
         else {
-            return res.status(400).send('id and phone number require');
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ message: "id and phone number require" }));
 
         }
     } catch (err) {
-        return res.status(400).send('invalid id and phone number');
-    }
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "invalid  id or phone number" }));    }
 }
 module.exports = {
     GetData,
@@ -124,3 +177,4 @@ module.exports = {
     PatchData,
     DeleteData
 }
+
